@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import * as cdk from 'aws-cdk-lib';
+import * as cdk from 'aws-cdk-lib/core';
 import { PangolinVpsStack } from '../lib/pangolin-vps-stack';
 
 const app = new cdk.App();

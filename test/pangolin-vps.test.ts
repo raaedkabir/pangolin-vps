@@ -4,7 +4,7 @@
 // Do not write configuration values (for example, ports, sizes, and names) again in the test.
 
 import { execFileSync } from 'child_process';
-import * as cdk from 'aws-cdk-lib';
+import * as cdk from 'aws-cdk-lib/core';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import * as PangolinVps from '../lib/pangolin-vps-stack';
 

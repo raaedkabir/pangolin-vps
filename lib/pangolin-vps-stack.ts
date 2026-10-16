@@ -1,4 +1,4 @@
-import * as cdk from 'aws-cdk-lib';
+import * as cdk from 'aws-cdk-lib/core';
 import { Construct } from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
@@ -33,6 +33,11 @@ export class PangolinVpsStack extends cdk.Stack {
       ec2.Port.tcp(22),
       "allow SSH access"
     )
+    // Acknowledge the "Security group allows 0.0.0.0/0 access to sensitive port 22" validation warning
+    cdk.Validations.of(securityGroup).acknowledge({
+      id: 'CloudFormation-Validate::W2508',
+      reason: 'SSH only accepts key-based login',
+    })
     securityGroup.addIngressRule(
       ec2.Peer.anyIpv4(),
       ec2.Port.tcp(80),

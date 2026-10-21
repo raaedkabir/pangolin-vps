@@ -21,6 +21,8 @@ const zones = template.findResources('AWS::Route53::HostedZone');
 const [zoneId] = Object.keys(zones);
 const zoneName = zones[zoneId].Properties.Name;
 
+const [identityId] = Object.keys(template.findResources('AWS::SES::EmailIdentity'));
+
 test('DNS records point at the VPS', () => {
   for (const name of [zoneName, `*.${zoneName}`]) {
     template.hasResourceProperties('AWS::Route53::RecordSet', {
@@ -39,6 +41,17 @@ test('Parent zone delegates to the new hosted zone', () => {
     HostedZoneId: Match.not({ Ref: zoneId }),
     ResourceRecords: { 'Fn::GetAtt': [zoneId, 'NameServers'] },
   });
+});
+
+test('SES verifies the domain with DKIM records in the hosted zone', () => {
+  for (const n of [1, 2, 3]) {
+    template.hasResourceProperties('AWS::Route53::RecordSet', {
+      Name: { 'Fn::GetAtt': [identityId, `DkimDNSTokenName${n}`] },
+      Type: 'CNAME',
+      HostedZoneId: { Ref: zoneId },
+      ResourceRecords: [{ 'Fn::GetAtt': [identityId, `DkimDNSTokenValue${n}`] }],
+    });
+  }
 });
 
 test('Bootstrap script is valid bash', () => {

@@ -1,12 +1,13 @@
 # Pangolin VPS
 
-This CDK app creates the DNS records for [Pangolin](https://github.com/fosrl/pangolin), which runs on a RackNerd VPS so the TrueNAS home server can be reached at `*.homelab.raaedkabir.com` without opening any ports at home.
+This CDK app creates the DNS records and the Amazon SES setup for [Pangolin](https://github.com/fosrl/pangolin), which runs on a RackNerd VPS so the TrueNAS home server can be reached at `*.homelab.raaedkabir.com` without opening any ports at home.
 
 Newt runs on TrueNAS and connects to Pangolin through a WireGuard tunnel, and Pangolin proxies requests back through that tunnel.
 
 ## What the stack deploys
 
 - Route 53 hosted zone for `homelab.raaedkabir.com`. The `raaedkabir.com` zone delegates to it, and its `homelab` and `*.homelab` A records point to the VPS IP address (`vpsIp` in `bin/pangolin-vps.ts`)
+- SES domain identity for `homelab.raaedkabir.com`, so that Pangolin can send email from that domain. Its DKIM records and a DMARC record are in the hosted zone
 
 ## What the bootstrap script does
 
@@ -28,6 +29,8 @@ Newt runs on TrueNAS and connects to Pangolin through a WireGuard tunnel, and Pa
    ```
 
    Do this before you run the installer, so the DNS records are live when Pangolin requests its Let's Encrypt certificate.
+
+   If the output has `CreateSmtpUser`, the `pangolin-smtp` IAM user that Pangolin sends email with does not exist. Create it in the SES console as the output says, and keep its SMTP username and password for step 5. Then run `npx cdk context --clear`, so that the next deploy finds the user.
 
 3. Generate the SSH key pair and copy the public key to the VPS. When `ssh-copy-id` asks for a password, enter the root password from the welcome email:
 
@@ -61,9 +64,8 @@ Newt runs on TrueNAS and connects to Pangolin through a WireGuard tunnel, and Pa
    - Email functionality (SMTP): yes
      - SMTP host: `email-smtp.ca-central-1.amazonaws.com` (Amazon SES)
      - SMTP port: `587` (the default)
-     - SMTP username: the access key ID of the IAM user that sends email through SES. To find it, run `aws iam list-access-keys --user-name <iam-user>`
-     - SMTP password: the SES SMTP password for that access key
-     - No-reply email address: `no-reply@nas.raaedkabir.com`. SES sends only from verified domains and addresses, and `nas.raaedkabir.com` is a verified domain
+     - SMTP username and password: the SMTP credentials of the `pangolin-smtp` IAM user (step 2)
+     - No-reply email address: `no-reply@homelab.raaedkabir.com`. SES sends only from verified domains and addresses, and the stack verifies `homelab.raaedkabir.com`
    - Server is IPv6 capable: no. The DNS records are IPv4 only
    - MaxMind GeoLite2 databases: yes
    - Install and start the containers: yes, with Docker
@@ -79,4 +81,4 @@ Newt runs on TrueNAS and connects to Pangolin through a WireGuard tunnel, and Pa
 
 - Docker opens the ports that it publishes, even if ufw blocks them. To see the ports that Pangolin publishes, run `docker port gerbil`.
 - The installer puts Pangolin in `/opt/pangolin`. Its data is in `/opt/pangolin/config` and `/opt/pangolin/docker-compose.yml`. Back them up (for example, to TrueNAS) so that you can restore them on a new VPS.
-- `npx cdk destroy` deletes the hosted zone and its DNS records. It does not change the VPS.
+- `npx cdk destroy` deletes the hosted zone, its DNS records, and the SES identity. It does not change the VPS or the `pangolin-smtp` IAM user.

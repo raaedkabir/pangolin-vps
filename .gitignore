@@ -10,5 +10,5 @@ cdk.out
 # Cached CDK lookups
 cdk.context.json
 
-# SSH key pair for the EC2 instance
-my-key-pair*
+# SSH key pair for the VPS
+pangolin-vps-key*

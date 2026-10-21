@@ -17,4 +17,7 @@ new PangolinVpsStack(app, 'PangolinVpsStack', {
   // env: { account: '123456789012', region: 'us-east-1' },
 
   /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
+
+  // Public IPv4 address of the RackNerd VPS
+  vpsIp: '172.245.123.11',
 });

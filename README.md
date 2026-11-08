@@ -77,6 +77,65 @@ Newt runs on TrueNAS and connects to Pangolin through a WireGuard tunnel, and Pa
 
 7. In the dashboard, create a Newt site and run Newt on TrueNAS as a custom app using the Docker Compose snippet the dashboard shows. Then add a resource for each TrueNAS service that you want to expose.
 
+## Integration API for Homepage
+
+The [Homepage Pangolin widget](https://gethomepage.dev/widgets/services/pangolin/) gets sites and resources from Pangolin's [Integration API](https://docs.pangolin.net/self-host/advanced/integration-api). The API is at `https://api.homelab.raaedkabir.com/v1`. The wildcard A record already points this name to the VPS.
+
+1. SSH in and add this line under `flags:` in `/opt/pangolin/config/config.yml`:
+
+   ```yaml
+       enable_integration_api: true
+   ```
+
+2. In `/opt/pangolin/config/traefik/dynamic_config.yml`, add the two routers under `http.routers` and the service under `http.services`:
+
+   ```yaml
+       int-api-router-redirect:
+         rule: "Host(`api.homelab.raaedkabir.com`)"
+         service: int-api-service
+         entryPoints:
+           - web
+         middlewares:
+           - redirect-to-https
+           - badger
+
+       int-api-router:
+         rule: "Host(`api.homelab.raaedkabir.com`)"
+         service: int-api-service
+         entryPoints:
+           - websecure
+         tls:
+           certResolver: letsencrypt
+   ```
+
+   ```yaml
+       int-api-service:
+         loadBalancer:
+           servers:
+             - url: "http://pangolin:3003"
+   ```
+
+3. Restart Pangolin and Traefik:
+
+   ```zsh
+   cd /opt/pangolin
+   docker compose restart pangolin traefik
+   ```
+
+   Open `https://api.homelab.raaedkabir.com/v1/docs`. The Swagger UI shows when the API is on. Traefik gets the Let's Encrypt certificate on the first request, so this can take a minute.
+
+4. In the dashboard, open the organization's API keys and create a key with only the List Sites and List Resources permissions. The API is public, so do not give the key more permissions. Copy the key, because Pangolin shows it only once. The organization ID is in the dashboard URL, after `pangolin.homelab.raaedkabir.com/`.
+
+5. Add the widget to the service in Homepage's `services.yaml`. Homepage adds `/v1` to the URL:
+
+   ```yaml
+   widget:
+     type: pangolin
+     url: https://api.homelab.raaedkabir.com
+     key: <api-key>
+     org: <org-id>
+   ```
+
 ## Notes
 
 - Docker opens the ports that it publishes, even if ufw blocks them. To see the ports that Pangolin publishes, run `docker port gerbil`.
